@@ -7,8 +7,10 @@
 #include <DNSServer.h>
 #include "Arduino.h"
 
-//#define ConnectTimeOut 300
-#define ConfigPortalTimeOut 120
+//#define WIFI_CONNECT_TIMEOUT 300
+#ifndef WIFI_PORTAL_TIMEOUT
+#define WIFI_PORTAL_TIMEOUT 300
+#endif
 #define MinimumWifiSignalQuality 8
 
 class Wifi
@@ -20,7 +22,9 @@ private:
     static String _pass;
 
     static DNSServer *dnsServer;
-    //static unsigned long connectStart;
+#ifdef WIFI_CONNECT_TIMEOUT
+    static unsigned long connectStart;
+#endif
 
 public:
     static unsigned long configPortalStart;

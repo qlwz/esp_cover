@@ -42,7 +42,7 @@ char *Util::dtostrfd(double number, unsigned char prec, char *s)
 {
     if ((isnan(number)) || (isinf(number)))
     { // Fix for JSON output (https://stackoverflow.com/questions/1423081/json-left-out-infinity-and-nan-json-status-in-ecmascript)
-        strcpy(s, "null");
+        strcpy(s, PSTR("null"));
         return s;
     }
     else
@@ -79,4 +79,14 @@ uint32_t Util::RoundSqrtInt(uint32_t num)
         s++;
     }
     return s / 2;
+}
+
+bool Util::endWith(char *str, const char *suffix, uint16_t strLen)
+{
+    if (strLen == 0)
+    {
+        strLen = strlen(str);
+    }
+    size_t suffixLen = strlen(suffix);
+    return suffixLen <= strLen && strncmp(str + strLen - suffixLen, suffix, suffixLen) == 0 ? true : false;
 }

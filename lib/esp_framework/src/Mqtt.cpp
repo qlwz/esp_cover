@@ -1,10 +1,9 @@
+#ifndef DISABLE_MQTT
+
 #include <PubSubClient.h>
 #include "Mqtt.h"
 #include "Module.h"
 
-String Mqtt::topicCmnd;
-String Mqtt::topicStat;
-String Mqtt::topicTele;
 uint8_t Mqtt::operationFlag = 0;
 PubSubClient Mqtt::mqttClient;
 uint32_t Mqtt::lastReconnectAttempt = 0;   // 最后尝试重连时间
@@ -50,8 +49,8 @@ bool Mqtt::mqttConnect()
 void Mqtt::doReportHeartbeat()
 {
     char message[250];
-    sprintf(message, "{\"UID\":\"%s\",\"SSID\":\"%s\",\"RSSI\":\"%s\",\"Version\":\"%s\",\"ip\":\"%s\",\"mac\":\"%s\",\"freeMem\":%d,\"uptime\":%d}",
-            UID, WiFi.SSID().c_str(), String(WiFi.RSSI()).c_str(), (module ? module->getModuleVersion().c_str() : "0"), WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str(), ESP.getFreeHeap(), millis() / 1000);
+    sprintf(message, PSTR("{\"UID\":\"%s\",\"SSID\":\"%s\",\"RSSI\":\"%s\",\"Version\":\"%s\",\"ip\":\"%s\",\"mac\":\"%s\",\"freeMem\":%d,\"uptime\":%d}"),
+            UID, WiFi.SSID().c_str(), String(WiFi.RSSI()).c_str(), (module ? module->getModuleVersion().c_str() : PSTR("0")), WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str(), ESP.getFreeHeap(), millis() / 1000);
     //Debug::AddInfo(PSTR("%s"), message);
     publish(getTeleTopic(F("HEARTBEAT")), message);
 }
@@ -107,25 +106,19 @@ void Mqtt::loop()
     }
 }
 
-void Mqtt::setTopic()
-{
-    topicCmnd = getTopic(0, "");
-    topicStat = getTopic(1, "");
-    topicTele = getTopic(2, "");
-}
-
 String Mqtt::getCmndTopic(String topic)
 {
-    return topicCmnd + topic;
+    return getTopic(0, topic);
 }
 
 String Mqtt::getStatTopic(String topic)
 {
-    return topicStat + topic;
+    return getTopic(1, topic);
 }
+
 String Mqtt::getTeleTopic(String topic)
 {
-    return topicTele + topic;
+    return getTopic(2, topic);
 }
 
 void Mqtt::mqttSetLoopCallback(MQTT_CALLBACK_SIGNATURE)
@@ -140,7 +133,6 @@ void Mqtt::mqttSetConnectedCallback(MQTT_CONNECTED_CALLBACK_SIGNATURE)
 
 PubSubClient &Mqtt::setClient(Client &client)
 {
-    setTopic();
     return mqttClient.setClient(client);
 }
 bool Mqtt::publish(String topic, const char *payload)
@@ -202,9 +194,10 @@ String Mqtt::getTopic(uint8_t prefix, String subtopic)
     fulltopic.replace(F("%prefix%"), (prefix == 0 ? F("cmnd") : ((prefix == 1 ? F("stat") : F("tele")))));
     fulltopic.replace(F("%hostname%"), UID);
     fulltopic.replace(F("%module%"), module ? module->getModuleName() : F("module"));
-    fulltopic.replace(F("#"), "");
-    fulltopic.replace(F("//"), "/");
+    fulltopic.replace(F("#"), F(""));
+    fulltopic.replace(F("//"), F("/"));
     if (!fulltopic.endsWith(F("/")))
         fulltopic += F("/");
     return fulltopic + subtopic;
 }
+#endif

@@ -11,6 +11,8 @@ message CoverConfigMessage {
 	uint32 power_switch = 5 [(nanopb).int_size = IS_8];
 	uint32 report_interval = 6 [(nanopb).int_size = IS_16];
     uint32 led = 7 [(nanopb).int_size = IS_8];
+
+    bool autoStroke = 9;
     
 	uint32 pin_rx = 20 [(nanopb).int_size = IS_8];
 	uint32 pin_tx = 21 [(nanopb).int_size = IS_8];

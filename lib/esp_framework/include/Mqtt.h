@@ -1,4 +1,5 @@
 // Mqtt.h
+#ifndef DISABLE_MQTT
 
 #ifndef _MQTT_h
 #define _MQTT_h
@@ -15,9 +16,6 @@ class Mqtt
 {
 protected:
     static String getTopic(uint8_t prefix, String subtopic);
-    static String topicCmnd;
-    static String topicStat;
-    static String topicTele;
     static uint8_t operationFlag;
     static void doReportHeartbeat();
 
@@ -34,7 +32,6 @@ public:
     static void mqttSetLoopCallback(MQTT_CALLBACK_SIGNATURE);
     static void mqttSetConnectedCallback(MQTT_CONNECTED_CALLBACK_SIGNATURE);
 
-    static void setTopic();
     static String getCmndTopic(String topic);
     static String getStatTopic(String topic);
     static String getTeleTopic(String topic);
@@ -55,5 +52,7 @@ public:
     static bool unsubscribe(String topic);
     static void perSecondDo();
 };
+
+#endif
 
 #endif

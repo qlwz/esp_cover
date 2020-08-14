@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 #include "Framework.h"
 #include "Module.h"
 #include "Rtc.h"
@@ -6,28 +5,31 @@
 #include "Util.h"
 
 uint16_t Framework::rebootCount = 0;
+#ifndef DISABLE_MQTT
 void Framework::callback(char *topic, byte *payload, unsigned int length)
 {
-    String str;
-    for (int i = 0; i < length; i++)
+    Debug::AddInfo(PSTR("Subscribe: %s payload: %.*s"), topic, length, payload);
+
+    char *cmnd = strrchr(topic, '/');
+    if (cmnd == nullptr)
     {
-        str += (char)payload[i];
+        return;
     }
+    cmnd++;
+    payload[length] = 0;
 
-    Debug::AddInfo(PSTR("Subscribe: %s payload: %s"), topic, str.c_str());
-
-    String topicStr = String(topic);
-    if (topicStr.endsWith(F("/OTA")))
+    if (strcmp(cmnd, "ota") == 0)
     {
+        String str = String((char *)payload);
         Http::OTA(str.endsWith(F(".bin")) ? str : OTA_URL);
     }
-    else if (topicStr.endsWith(F("/restart")))
+    else if (strcmp(cmnd, "restart") == 0)
     {
         ESP.reset();
     }
     else if (module)
     {
-        module->mqttCallback(topicStr, str);
+        module->mqttCallback(topic, (char *)payload, cmnd);
     }
 
     Led::led(200);
@@ -42,6 +44,7 @@ void Framework::connectedCallback()
         module->mqttConnected();
     }
 }
+#endif
 
 void Framework::tickerPerSecondDo()
 {
@@ -58,7 +61,9 @@ void Framework::tickerPerSecondDo()
     Rtc::perSecondDo();
 
     Config::perSecondDo();
+#ifndef DISABLE_MQTT
     Mqtt::perSecondDo();
+#endif
     module->perSecondDo();
 }
 
@@ -70,7 +75,6 @@ void Framework::one(unsigned long baud)
     rebootCount = Rtc::rtcReboot.fast_reboot_count > BOOT_LOOP_OFFSET ? Rtc::rtcReboot.fast_reboot_count - BOOT_LOOP_OFFSET : 0;
 
     Serial.begin(baud);
-    EEPROM.begin(GlobalConfigMessage_size + 6);
     globalConfig.debug.type = 1;
 }
 
@@ -97,10 +101,9 @@ void Framework::setup()
     }
     else
     {
-        String mac = WiFi.macAddress();
-        mac.replace(":", "");
-        mac = mac.substring(6, 12);
-        sprintf(UID, "%s_%s", module->getModuleName().c_str(), mac.c_str());
+        uint8_t mac[6];
+        wifi_get_macaddr(STATION_IF, mac);
+        sprintf(UID, "%s_%02x%02x%02x", module->getModuleName().c_str(), mac[3], mac[4], mac[5]);
     }
     Util::strlowr(UID);
 
@@ -125,9 +128,11 @@ void Framework::setup()
     }
     else
     {
+#ifndef DISABLE_MQTT
         Mqtt::setClient(Wifi::wifiClient);
         Mqtt::mqttSetConnectedCallback(connectedCallback);
         Mqtt::mqttSetLoopCallback(callback);
+#endif
         module->init();
         tickerPerSecond = new Ticker();
         tickerPerSecond->attach(1, tickerPerSecondDo);
@@ -148,8 +153,10 @@ void Framework::loop()
     {
         yield();
         Led::loop();
+#ifndef DISABLE_MQTT
         yield();
         Mqtt::loop();
+#endif
         yield();
         module->loop();
         yield();
